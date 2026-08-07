@@ -1,0 +1,24 @@
+[session]
+name = "edge-loadtest"
+output_dir = "outs"
+
+[[collectors]]
+use = "process.basic"
+interval_seconds = 3
+
+[[analyzers]]
+use = "process.restart"
+
+[[analyzers]]
+use = "handle.growth"
+min_delta = 10
+
+[[analyzers]]
+use = "memory.growth"
+min_delta_bytes = 1048576
+
+[[reporters]]
+use = "json"
+
+[[reporters]]
+use = "perfetto"

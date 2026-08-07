@@ -1,0 +1,29 @@
+[session]
+name = "example-loadtest"
+output_dir = "outs"
+
+[[collectors]]
+use = "process.basic"
+interval_seconds = 5
+
+[[snapshots]]
+use = "top"
+interval_seconds = 30
+timeout_seconds = 5
+
+[[analyzers]]
+use = "process.restart"
+
+[[analyzers]]
+use = "handle.growth"
+min_delta = 10
+
+[[analyzers]]
+use = "memory.growth"
+min_delta_bytes = 1048576
+
+[[reporters]]
+use = "json"
+
+[[reporters]]
+use = "perfetto"

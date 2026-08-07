@@ -1,0 +1,29 @@
+[session]
+name = "leak-demo"
+output_dir = "outs"
+
+[[collectors]]
+use = "process.basic"
+interval_seconds = 1
+
+[[snapshots]]
+use = "top"
+interval_seconds = 10
+timeout_seconds = 5
+
+[[analyzers]]
+use = "process.restart"
+
+[[analyzers]]
+use = "handle.growth"
+min_delta = 3
+
+[[analyzers]]
+use = "memory.growth"
+min_delta_bytes = 1048576
+
+[[reporters]]
+use = "json"
+
+[[reporters]]
+use = "perfetto"
