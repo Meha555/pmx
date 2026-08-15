@@ -1,0 +1,130 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 矩阵构建：每个平台产出 static（单二进制）与 dynamic（宿主 + plugins/）两套归档。
+  # macOS 同时覆盖 aarch64（macos-latest）与 x86_64（macos-13）两种架构。
+  build:
+    name: build ${{ matrix.artifact }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: pmx-linux-x86_64
+          - os: windows-latest
+            artifact: pmx-windows-x86_64
+          - os: macos-latest
+            artifact: pmx-macos-aarch64
+          - os: macos-13
+            artifact: pmx-macos-x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Test (workspace)
+        run: cargo test --workspace
+
+      - name: Test (dynamic plugins)
+        shell: bash
+        run: |
+          cargo build -p pmx-module-process-basic -p pmx-module-process-restart \
+            -p pmx-module-handle-growth -p pmx-module-memory-growth -p pmx-module-lsof \
+            -p pmx-module-pstack -p pmx-module-top -p pmx-module-json -p pmx-module-perfetto \
+            --features pmx-ffi
+          mkdir -p target/debug/plugins
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp target/debug/pmx_module_*.dll target/debug/plugins/
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            cp target/debug/libpmx_module_*.dylib target/debug/plugins/
+          else
+            cp target/debug/libpmx_module_*.so target/debug/plugins/
+          fi
+          cargo test -p pmx --no-default-features --features dynamic --test dynamic_plugins
+
+      # 静态单文件是默认分发形态。先把静态二进制复制到临时目录保存，
+      # 因为随后的 dynamic 构建会重新编译并覆盖 target/release 下的 pmx。
+      - name: Build static (single binary)
+        shell: bash
+        run: |
+          cargo build --release -p pmx
+          BIN="pmx"; [ "$RUNNER_OS" = "Windows" ] && BIN="pmx.exe"
+          mkdir -p "$RUNNER_TEMP/static"
+          cp "target/release/$BIN" "$RUNNER_TEMP/static/$BIN"
+
+      # 复用仓库自带脚本构建 dynamic 形态：宿主二进制 + plugins/ 全部插件 dylib。
+      - name: Build dynamic (host + plugins)
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell -ExecutionPolicy Bypass -File scripts/build-dynamic.ps1 -Release
+          else
+            bash scripts/build-dynamic.sh --release
+          fi
+
+      # 组装两个发布包：static（pmx + configs）、dynamic（pmx + plugins + configs），
+      # 并压缩为平台对应的归档格式后放到 assets 目录供上传。
+      - name: Package and compress
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="pmx"; [ "$RUNNER_OS" = "Windows" ] && BIN="pmx.exe"
+          PKG_DIR="$RUNNER_TEMP/pkg"
+          ASSETS="$RUNNER_TEMP/assets"
+          mkdir -p "$PKG_DIR" "$ASSETS"
+          STATIC_DIR="$PKG_DIR/${{ matrix.artifact }}"
+          DYNAMIC_DIR="$PKG_DIR/${{ matrix.artifact }}-dynamic"
+          mkdir -p "$STATIC_DIR/configs" "$DYNAMIC_DIR/configs"
+
+          # static 包：单二进制 + 示例配置
+          cp "$RUNNER_TEMP/static/$BIN" "$STATIC_DIR/$BIN"
+          cp -r configs/. "$STATIC_DIR/configs/"
+
+          # dynamic 包：宿主二进制 + plugins/ + 示例配置
+          cp "target/release/$BIN" "$DYNAMIC_DIR/$BIN"
+          cp -r target/release/plugins "$DYNAMIC_DIR/plugins"
+          cp -r configs/. "$DYNAMIC_DIR/configs/"
+
+          # 压缩归档
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell -Command "Compress-Archive -Path '$STATIC_DIR' -DestinationPath '$ASSETS/${{ matrix.artifact }}.zip' -Force; Compress-Archive -Path '$DYNAMIC_DIR' -DestinationPath '$ASSETS/${{ matrix.artifact }}-dynamic.zip' -Force"
+          else
+            tar -C "$PKG_DIR" -czf "$ASSETS/${{ matrix.artifact }}.tar.gz" "${{ matrix.artifact }}"
+            tar -C "$PKG_DIR" -czf "$ASSETS/${{ matrix.artifact }}-dynamic.tar.gz" "${{ matrix.artifact }}-dynamic"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/assets/*
+          if-no-files-found: error
+
+  # 仅在打 tag 时把各平台的归档汇总上传到 GitHub Releases。
+  release:
+    name: publish to GitHub Releases
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

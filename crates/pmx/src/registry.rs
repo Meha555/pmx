@@ -53,3 +53,19 @@ mod tests {
         registry
     }
 }
+
+#[cfg(all(test, feature = "dynamic"))]
+mod dynamic_tests {
+    use super::*;
+
+    #[test]
+    fn dynamic_registry_does_not_include_static_modules() {
+        let dir = tempfile::tempdir().expect("create empty plugin dir");
+        let registry = available(Some(dir.path())).expect("build dynamic registry");
+
+        assert!(
+            registry.modules().is_empty(),
+            "dynamic mode must load modules only from the plugin directory, without static built-ins"
+        );
+    }
+}

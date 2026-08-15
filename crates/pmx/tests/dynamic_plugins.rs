@@ -54,6 +54,17 @@ fn plugin_name_with_suffix(name: &str, suffix: &str) -> OsString {
     OsString::from(format!("{stem}{suffix}.{ext}"))
 }
 
+/// 生成一个会被当前平台扫描到、但内容一定不是动态库的文件名。
+fn broken_library_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "pmx_module_broken.dll"
+    } else if cfg!(target_os = "macos") {
+        "libpmx_module_broken.dylib"
+    } else {
+        "libpmx_module_broken.so"
+    }
+}
+
 /// 插件库的源目录（`<exe>/plugins`）。仅当存在插件库时返回 Some。
 fn source_plugins_dir() -> Option<PathBuf> {
     let exe = env!("CARGO_BIN_EXE_pmx");
@@ -129,16 +140,15 @@ fn abi_incompatible_library_is_skipped_with_warning() {
         eprintln!("skipping: no plugin libs in plugins dir");
         return;
     };
-    // 构造一个无法被正确加载的库：拷贝一个插件库并截断字节。
-    let source = source_plugins_dir().expect("plugins dir");
-    let json_plugin = find_plugin(&source, "json");
-    let bytes = std::fs::read(&json_plugin).expect("read plugin lib");
-    std::fs::write(dir.join("not_a_plugin.dll"), &bytes[..bytes.len() / 2])
-        .expect("write broken plugin lib");
+    // 构造一个会被插件扫描命中、但无法被系统加载器识别的空库文件。
+    std::fs::File::create(dir.join(broken_library_name())).expect("write broken plugin lib");
 
     let (output, code) = pmx(&dir, &["modules"]);
     // 坏库应被 warning 跳过，正常库仍全部加载，退出码 0。
-    assert_eq!(code, 0, "expected success with skipped bad dll:\n{output}");
+    assert_eq!(
+        code, 0,
+        "expected success with skipped bad library:\n{output}"
+    );
     assert!(
         output.contains("warning: skipping plugin") || output.contains("failed to load"),
         "expected a skip warning:\n{output}"
