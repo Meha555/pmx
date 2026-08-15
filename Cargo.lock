@@ -228,6 +228,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 
 [[package]]
+name = "libloading"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link 0.2.1",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -313,11 +323,123 @@ dependencies = [
  "anyhow",
  "clap",
  "ctrlc",
+ "libloading",
+ "pmx-modules",
+ "pmx-sdk",
  "serde",
  "serde_json",
  "sysinfo",
  "tempfile",
  "thiserror",
+ "toml",
+]
+
+[[package]]
+name = "pmx-module-handle-growth"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "pmx-module-json"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "pmx-module-lsof"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "pmx-module-memory-growth"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "pmx-module-perfetto"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "pmx-module-process-basic"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde_json",
+ "sysinfo",
+]
+
+[[package]]
+name = "pmx-module-process-restart"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "pmx-module-pstack"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "pmx-module-top"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pmx-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "pmx-modules"
+version = "0.1.0"
+dependencies = [
+ "pmx-module-handle-growth",
+ "pmx-module-json",
+ "pmx-module-lsof",
+ "pmx-module-memory-growth",
+ "pmx-module-perfetto",
+ "pmx-module-process-basic",
+ "pmx-module-process-restart",
+ "pmx-module-pstack",
+ "pmx-module-top",
+ "pmx-sdk",
+]
+
+[[package]]
+name = "pmx-sdk"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
  "toml",
 ]
 

@@ -1,0 +1,17 @@
+[package]
+name = "pmx-modules"
+version = "0.1.0"
+edition = "2024"
+description = "Static PMX built-in module bundle"
+
+[dependencies]
+pmx-sdk = { path = "../pmx-sdk" }
+pmx-module-process-basic = { path = "process-basic" }
+pmx-module-process-restart = { path = "process-restart" }
+pmx-module-handle-growth = { path = "handle-growth" }
+pmx-module-memory-growth = { path = "memory-growth" }
+pmx-module-lsof = { path = "lsof" }
+pmx-module-pstack = { path = "pstack" }
+pmx-module-top = { path = "top" }
+pmx-module-json = { path = "json" }
+pmx-module-perfetto = { path = "perfetto" }

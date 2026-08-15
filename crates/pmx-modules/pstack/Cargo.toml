@@ -1,0 +1,15 @@
+[package]
+name = "pmx-module-pstack"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+pmx-ffi = []
+
+[dependencies]
+pmx-sdk = { path = "../../pmx-sdk" }
+anyhow = "1.0"
+serde_json = "1.0"
